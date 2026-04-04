@@ -1,25 +1,44 @@
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual env
 venv/
 .venv/
 env/
+
+# Environment
 .env
-.env.local
+!.env.example
+
+# ChromaDB persistent data
+data/chroma/*
+!data/chroma/.gitkeep
+
+# Documents (uploaded by users, not tracked)
+data/documents/*
+!data/documents/.gitkeep
+
+# IDE
 .idea/
 .vscode/
 *.swp
+*.swo
+
+# OS
 .DS_Store
 Thumbs.db
-*.log
-dist/
-build/
-*.egg-info/
-.eggs/
-htmlcov/
+
+# Testing
 .coverage
+htmlcov/
 .pytest_cache/
-data/chroma/*
-!data/chroma/.gitkeep
-data/documents/*
-!data/documents/.gitkeep
+
+# MLflow
+mlruns/
