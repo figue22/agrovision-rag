@@ -5,9 +5,9 @@ from datetime import datetime
 from src.config.settings import get_settings
 from src.vectorstore.chroma_store import ChromaStore
 from src.schemas.rag import (
-    QueryRequest, QueryResponse, SourceReference,
-    DocumentInfo, DocumentsListResponse, EstadoIndexacion,
+    QueryRequest, QueryResponse, SourceReference, DocumentsListResponse,
 )
+
 
 logger = logging.getLogger("agrovision-rag")
 
