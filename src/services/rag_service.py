@@ -1,7 +1,6 @@
 import time
 import logging
 from datetime import datetime
-from typing import Optional
 
 from src.config.settings import get_settings
 from src.vectorstore.chroma_store import ChromaStore
@@ -29,7 +28,7 @@ class RAGService:
 
     def _initialize(self) -> None:
         """Conecta a ChromaDB al iniciar."""
-        self.chroma.connect()
+        self.chroma.connect
 
     @property
     def uptime(self) -> float:
