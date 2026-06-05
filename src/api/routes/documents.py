@@ -3,7 +3,6 @@ HU-044 — Endpoints de gestión de documentos
 """
 
 import os
-import shutil
 import uuid
 from typing import Optional
 

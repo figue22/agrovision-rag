@@ -4,7 +4,6 @@ HU-044 — Pipeline de ingesta: PDF/DOCX -> chunks -> embeddings -> ChromaDB
 
 import logging
 import os
-import uuid
 from dataclasses import dataclass
 from typing import List, Optional
 
