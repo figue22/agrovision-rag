@@ -144,22 +144,10 @@ class IngestionService:
         parcela_id: Optional[str] = None,
         idioma: str = "es",
         institucion: Optional[str] = None,
+        documento_id_externo: Optional[str] = None,
     ) -> dict:
-        documento_id = str(uuid.uuid4())
+        documento_id = documento_id_externo or str(uuid.uuid4())
         logger.info("PASO 1: Iniciando ingesta: %s (%s)", titulo, documento_id)
-
-        self._save_documento_bd(
-            documento_id=documento_id,
-            titulo=titulo,
-            categoria=categoria,
-            ruta_archivo=file_path,
-            tipo_archivo=tipo_archivo,
-            tamano_kb=tamano_kb,
-            subido_por_id=subido_por_id,
-            parcela_id=parcela_id,
-            idioma=idioma,
-        )
-        logger.info("PASO 2: Metadata guardada en BD")
 
         try:
             metadata_base = {
@@ -173,12 +161,11 @@ class IngestionService:
             if parcela_id:
                 metadata_base["parcela_id"] = parcela_id
 
-            logger.info("PASO 3: Iniciando pipeline de chunks")
+            logger.info("PASO 2: Iniciando pipeline de chunks")
             chunks = self.pipeline.process_file(file_path, documento_id, metadata_base)
-            logger.info("PASO 4: Chunks generados: %d", len(chunks))
+            logger.info("PASO 3: Chunks generados: %d", len(chunks))
 
             if not chunks:
-                self._update_estado(documento_id, EstadoIndexacion.FALLIDO)
                 return {
                     "documento_id": documento_id,
                     "chunks_generados": 0,
@@ -187,15 +174,15 @@ class IngestionService:
                 }
 
             textos = [c.texto for c in chunks]
-            logger.info("PASO 5: Iniciando embeddings para %d textos", len(textos))
+            logger.info("PASO 4: Iniciando embeddings para %d textos", len(textos))
             embeddings = self.embeddings.embed_documents(textos)
-            logger.info("PASO 6: Embeddings completados: %d", len(embeddings))
+            logger.info("PASO 5: Embeddings completados: %d", len(embeddings))
 
             ids = [c.chunk_id for c in chunks]
             metadatas = [c.metadata for c in chunks]
 
             inicio_indexacion = time.time()
-            logger.info("PASO 7: Indexando en ChromaDB")
+            logger.info("PASO 6: Indexando en ChromaDB")
             self.chroma.delete_by_document_id(documento_id)
             self.chroma.add_documents(
                 ids=ids,
@@ -204,18 +191,15 @@ class IngestionService:
                 embeddings=embeddings,
             )
             duracion_ms = int((time.time() - inicio_indexacion) * 1000)
-            logger.info("PASO 8: Indexados %d chunks en ChromaDB", len(chunks))
+            logger.info("PASO 7: Indexados %d chunks en ChromaDB", len(chunks))
 
-            # 5. Guardar métricas en indice_rag_documentos
             self._save_indice_rag(
                 documento_id=documento_id,
                 cantidad_chunks=len(chunks),
                 ids_vectores=ids,
                 duracion_ms=duracion_ms,
             )
-
-            self._update_estado(documento_id, EstadoIndexacion.INDEXADO, len(chunks))
-            logger.info("PASO 9: Estado actualizado en BD")
+            logger.info("PASO 8: indice_rag_documentos actualizado")
 
             return {
                 "documento_id": documento_id,
@@ -226,7 +210,6 @@ class IngestionService:
 
         except Exception as e:
             logger.error("Error en pipeline de ingesta: %s", e)
-            self._update_estado(documento_id, EstadoIndexacion.FALLIDO)
             return {
                 "documento_id": documento_id,
                 "chunks_generados": 0,
