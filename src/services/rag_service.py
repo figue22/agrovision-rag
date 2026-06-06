@@ -1,7 +1,6 @@
 import time
 import logging
 from datetime import datetime
-from typing import Optional
 
 import google.generativeai as genai
 
@@ -215,3 +214,4 @@ Responde basándote únicamente en el contexto anterior. Cita las fuentes usando
             total=0,
             total_chunks=chroma.document_count,
         )
+    
