@@ -17,18 +17,15 @@ class EstadoIndexacion(str, Enum):
 # ── Query (consulta RAG) ──
 
 class QueryRequest(BaseModel):
-    """Consulta en lenguaje natural al sistema RAG."""
-    pregunta: str = Field(..., min_length=3, description="Pregunta en lenguaje natural")
-    top_k: int = Field(default=5, ge=1, le=20, description="Cantidad de chunks a recuperar")
-    filtro_categoria: Optional[str] = Field(default=None, description="Filtrar por categoría de documento")
-
-    model_config = {"json_schema_extra": {
-        "example": {
-            "pregunta": "¿Cuál es la temperatura óptima para el cultivo de cacao en Colombia?",
-            "top_k": 5,
-            "filtro_categoria": None,
-        }
-    }}
+    """Request para consulta RAG."""
+    pregunta: str = Field(..., description="Pregunta en español")
+    top_k: int = Field(default=5, ge=1, le=20)
+    filtro_categoria: Optional[str] = Field(default=None)
+    # Contexto del agricultor para personalización
+    cultivo: Optional[str] = Field(default=None, description="Cultivo del agricultor: cafe, cacao")
+    region: Optional[str] = Field(default=None, description="Departamento del agricultor")
+    nombre_agricultor: Optional[str] = Field(default=None, description="Nombre del agricultor")
+    parcela_nombre: Optional[str] = Field(default=None, description="Nombre de la parcela")
 
 
 class SourceReference(BaseModel):
