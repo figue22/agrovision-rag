@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # LLM Generation
     LLM_MODEL: str = "gemini-2.5-flash"
     LLM_TEMPERATURE: float = 0.3
-    LLM_MAX_TOKENS: int = 1024
+    LLM_MAX_TOKENS: int = 2048
 
     # Retrieval
     RETRIEVER_TOP_K: int = 5
