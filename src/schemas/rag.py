@@ -33,9 +33,10 @@ class QueryRequest(BaseModel):
 
 class SourceReference(BaseModel):
     """Referencia a la fuente de una respuesta."""
-    documento_id: Optional[str] = None
+    documento_id: str | None = None
     titulo: str
-    pagina: Optional[int] = None
+    pagina: int | None = None
+    institucion: str | None = Field(default=None, description="Institución autora del documento")
     chunk_text: str = Field(..., description="Fragmento relevante del documento")
     score: float = Field(..., description="Score de similitud")
 

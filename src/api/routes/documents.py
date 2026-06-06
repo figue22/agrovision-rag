@@ -35,6 +35,7 @@ async def upload_document(
     file: UploadFile = File(...),
     titulo: str = Form(...),
     categoria: str = Form(default="general"),
+    institucion: Optional[str] = Form(default=None),
     parcela_id: Optional[str] = Form(default=None),
     subido_por_id: Optional[str] = Form(default=None),
     idioma: str = Form(default="es"),
@@ -79,6 +80,7 @@ async def upload_document(
         subido_por_id=subido_por_id,
         parcela_id=parcela_id,
         idioma=idioma,
+        institucion=institucion,
     )
 
     return DocumentUploadResponse(
