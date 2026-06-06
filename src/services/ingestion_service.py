@@ -16,6 +16,7 @@ from src.document_loaders.pipeline import DocumentPipeline
 from src.embeddings.gemini_embeddings import GeminiEmbeddings
 from src.vectorstore.chroma_store import ChromaStore
 from src.schemas.rag import EstadoIndexacion
+import time
 
 logger = logging.getLogger("agrovision-rag")
 
@@ -198,6 +199,7 @@ class IngestionService:
             ids = [c.chunk_id for c in chunks]
             metadatas = [c.metadata for c in chunks]
 
+            inicio_indexacion = time.time()
             logger.info("PASO 7: Indexando en ChromaDB")
             self.chroma.delete_by_document_id(documento_id)
             self.chroma.add_documents(
@@ -206,7 +208,16 @@ class IngestionService:
                 metadatas=metadatas,
                 embeddings=embeddings,
             )
+            duracion_ms = int((time.time() - inicio_indexacion) * 1000)
             logger.info("PASO 8: Indexados %d chunks en ChromaDB", len(chunks))
+
+            # 5. Guardar métricas en indice_rag_documentos
+            self._save_indice_rag(
+                documento_id=documento_id,
+                cantidad_chunks=len(chunks),
+                ids_vectores=ids,
+                duracion_ms=duracion_ms,
+            )
 
             self._update_estado(documento_id, EstadoIndexacion.INDEXADO, len(chunks))
             logger.info("PASO 9: Estado actualizado en BD")
@@ -243,3 +254,69 @@ class IngestionService:
         except Exception as e:
             logger.error("Error eliminando documento: %s", e)
             return False
+
+    def _save_indice_rag(
+        self,
+        documento_id: str,
+        cantidad_chunks: int,
+        ids_vectores: list,
+        duracion_ms: int,
+    ) -> None:
+        """Guarda métricas de indexación en tabla indice_rag_documentos."""
+        if not self._session:
+            return
+        try:
+            import json
+            # Verificar si ya existe
+            existing = self._session.execute(text("""
+                SELECT indice_rag_id FROM indice_rag_documentos
+                WHERE documento_id = :documento_id
+            """), {"documento_id": documento_id}).fetchone()
+
+            if existing:
+                self._session.execute(text("""
+                    UPDATE indice_rag_documentos
+                    SET cantidad_chunks = :cantidad_chunks,
+                        ids_vectores = :ids_vectores,
+                        fecha_reindexacion = NOW(),
+                        duracion_indexacion_ms = :duracion_ms,
+                        estado = 'activo'
+                    WHERE documento_id = :documento_id
+                """), {
+                    "cantidad_chunks": cantidad_chunks,
+                    "ids_vectores": json.dumps(ids_vectores),
+                    "duracion_ms": duracion_ms,
+                    "documento_id": documento_id,
+                })
+            else:
+                self._session.execute(text("""
+                    INSERT INTO indice_rag_documentos (
+                        documento_id, nombre_coleccion, cantidad_chunks,
+                        tamano_chunk_tokens, overlap_tokens,
+                        modelo_embedding, dimensiones_embedding,
+                        ids_vectores, fecha_indexacion,
+                        duracion_indexacion_ms, estado, creado_en
+                    ) VALUES (
+                        :documento_id, :nombre_coleccion, :cantidad_chunks,
+                        :tamano_chunk_tokens, :overlap_tokens,
+                        :modelo_embedding, :dimensiones_embedding,
+                        :ids_vectores, NOW(),
+                        :duracion_ms, 'activo', NOW()
+                    )
+                """), {
+                    "documento_id": documento_id,
+                    "nombre_coleccion": self.settings.CHROMA_COLLECTION_NAME,
+                    "cantidad_chunks": cantidad_chunks,
+                    "tamano_chunk_tokens": self.settings.CHUNK_SIZE,
+                    "overlap_tokens": self.settings.CHUNK_OVERLAP,
+                    "modelo_embedding": self.settings.EMBEDDING_MODEL,
+                    "dimensiones_embedding": self.settings.EMBEDDING_DIMENSIONS,
+                    "ids_vectores": json.dumps(ids_vectores),
+                    "duracion_ms": duracion_ms,
+                })
+
+            self._session.commit()
+            logger.info("indice_rag_documentos actualizado para documento %s", documento_id)
+        except Exception as e:
+            logger.error("Error guardando indice_rag: %s", e)
+            self._session.rollback()
