@@ -23,9 +23,9 @@ class Settings(BaseSettings):
     CHROMA_COLLECTION_NAME: str = "agrovision_docs"
 
     # LLM Generation
-    LLM_MODEL: str = "gemini-1.5-flash"
+    LLM_MODEL: str = "gemini-2.5-flash"
     LLM_TEMPERATURE: float = 0.3
-    LLM_MAX_TOKENS: int = 500
+    LLM_MAX_TOKENS: int = 1024
 
     # Retrieval
     RETRIEVER_TOP_K: int = 5
