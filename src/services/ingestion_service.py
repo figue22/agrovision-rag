@@ -113,13 +113,7 @@ class IngestionService:
             self._session.rollback()
             return False
 
-    def _update_estado(
-        self,
-        documento_id: str,
-        estado: EstadoIndexacion,
-        chunks: int = 0,
-    ) -> None:
-        """Actualiza el estado de indexación en la BD."""
+    def _update_estado(self, documento_id: str, estado: EstadoIndexacion, chunks: int = 0) -> None:
         if not self._session:
             return
         try:
@@ -127,8 +121,7 @@ class IngestionService:
                 UPDATE documentos
                 SET estado_indexacion = :estado,
                     chunks_indexados = :chunks,
-                    actualizado_en = NOW(),
-                    fecha_indexacion = CASE WHEN :estado = 'indexado' THEN NOW() ELSE fecha_indexacion END
+                    actualizado_en = NOW()
                 WHERE documento_id = :documento_id
             """), {
                 "estado": estado.value,

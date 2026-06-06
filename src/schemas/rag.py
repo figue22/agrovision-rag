@@ -48,6 +48,7 @@ class QueryResponse(BaseModel):
     modelo_usado: str
     tokens_usados: Optional[int] = None
     tiempo_respuesta_ms: float
+    relevancia_pct: Optional[float] = Field(default=None, description="Score de relevancia promedio %")
     timestamp: datetime
 
 
