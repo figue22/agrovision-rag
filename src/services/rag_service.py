@@ -1,5 +1,6 @@
 import time
 import logging
+import uuid as uuid_lib
 from datetime import datetime
 from typing import Optional
 
@@ -27,6 +28,16 @@ Reglas:
 6. Sé conciso pero completo (máximo 3-4 párrafos)
 7. Cuando tengas contexto del agricultor, personaliza la respuesta para su situación específica"""
 
+_feedback_service_instance = None
+
+
+def get_feedback_service_instance():
+    global _feedback_service_instance
+    if _feedback_service_instance is None:
+        from src.services.feedback_service import FeedbackService
+        _feedback_service_instance = FeedbackService()
+    return _feedback_service_instance
+
 
 def build_personalized_prompt(
     pregunta: str,
@@ -37,8 +48,6 @@ def build_personalized_prompt(
     parcela_nombre: Optional[str] = None,
 ) -> str:
     """Construye prompt personalizado según el contexto del agricultor."""
-
-    # Contexto del agricultor
     contexto_agricultor = ""
     if any([nombre_agricultor, cultivo, region, parcela_nombre]):
         partes = []
@@ -106,17 +115,13 @@ class RAGService:
         cultivo: Optional[str],
         region: Optional[str],
     ) -> Optional[dict]:
-        """
-        Construye filtro de metadata para ChromaDB.
-        Filtra por cultivo y/o categoría si están disponibles.
-        """
+        """Construye filtro de metadata para ChromaDB."""
         conditions = []
 
         if filtro_categoria:
             conditions.append({"categoria": {"$eq": filtro_categoria}})
 
         if cultivo:
-            # Buscar documentos específicos del cultivo o generales
             conditions.append({
                 "$or": [
                     {"categoria": {"$eq": cultivo}},
@@ -170,6 +175,7 @@ class RAGService:
 
     async def query(self, request: QueryRequest) -> QueryResponse:
         start = time.time()
+        consulta_id = str(uuid_lib.uuid4())
 
         logger.info(
             "RAG query: '%s' | cultivo=%s | region=%s",
@@ -192,7 +198,6 @@ class RAGService:
 
         logger.info("Filtro ChromaDB: %s", where_filter)
 
-        # Primer intento con filtro
         results = chroma.query(
             query_embedding=query_embedding,
             n_results=request.top_k,
@@ -235,31 +240,45 @@ class RAGService:
         # ── PASO 4: Context assembly ──
         contexto = self._assemble_context(fuentes)
 
-        # ── PASO 5: Generation personalizada ──
+        # ── PASO 5: Generation con reintentos automáticos ──
         respuesta = ""
         tokens_usados = None
 
         if fuentes and self.openai_configured:
-            try:
-                prompt = build_personalized_prompt(
-                    pregunta=request.pregunta,
-                    contexto=contexto,
-                    cultivo=request.cultivo,
-                    region=request.region,
-                    nombre_agricultor=request.nombre_agricultor,
-                    parcela_nombre=request.parcela_nombre,
-                )
-
-                llm = self._get_llm()
-                response = llm.generate_content(prompt)
-                respuesta = response.text
-                tokens_usados = len(prompt.split()) + len(respuesta.split())
-
-                logger.info("Respuesta generada: %d tokens aprox.", tokens_usados)
-
-            except Exception as e:
-                logger.error("Error en generación LLM: %s", e)
-                respuesta = f"Error al generar respuesta: {str(e)}"
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    prompt = build_personalized_prompt(
+                        pregunta=request.pregunta,
+                        contexto=contexto,
+                        cultivo=request.cultivo,
+                        region=request.region,
+                        nombre_agricultor=request.nombre_agricultor,
+                        parcela_nombre=request.parcela_nombre,
+                    )
+                    llm = self._get_llm()
+                    response = llm.generate_content(prompt)
+                    respuesta = response.text
+                    tokens_usados = len(prompt.split()) + len(respuesta.split())
+                    logger.info("Respuesta generada: %d tokens aprox.", tokens_usados)
+                    break
+                except Exception as e:
+                    error_str = str(e)
+                    if "429" in error_str and attempt < max_retries - 1:
+                        wait = 30 * (attempt + 1)
+                        logger.warning(
+                            "Rate limit generación. Esperando %ds (intento %d/%d)...",
+                            wait, attempt + 1, max_retries,
+                        )
+                        time.sleep(wait)
+                    else:
+                        logger.error("Error en generación LLM: %s", e)
+                        respuesta = (
+                            f"Encontré {len(fuentes)} fragmentos relevantes. "
+                            "El servicio de generación está temporalmente saturado. "
+                            "Intenta de nuevo en unos minutos."
+                        )
+                        break
         elif not fuentes:
             respuesta = (
                 "No encontré documentos relevantes para tu consulta. "
@@ -275,7 +294,24 @@ class RAGService:
         duration_ms = round((time.time() - start) * 1000, 2)
         logger.info("Query completado en %.1fms", duration_ms)
 
+        # ── PASO 7: Registrar consulta para métricas ──
+        try:
+            feedback_svc = get_feedback_service_instance()
+            doc_ids = [f.documento_id for f in fuentes if f.documento_id]
+            feedback_svc.registrar_consulta(
+                consulta_id=consulta_id,
+                pregunta=request.pregunta,
+                documentos_citados=doc_ids,
+                tiempo_ms=duration_ms,
+                relevancia_pct=relevancia,
+                cultivo=request.cultivo,
+                region=request.region,
+            )
+        except Exception as e:
+            logger.warning("No se pudo registrar consulta: %s", e)
+
         return QueryResponse(
+            consulta_id=consulta_id,
             respuesta=respuesta,
             fuentes=fuentes,
             pregunta_original=request.pregunta,

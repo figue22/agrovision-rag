@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.config.settings import get_settings
-from src.api.routes import health_router, query_router, documents_router
+from src.api.routes import health_router, query_router, documents_router, feedback_router
 from src.api.middleware.logging_middleware import LoggingMiddleware
 
 logging.basicConfig(
@@ -57,7 +57,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(query_router)
     app.include_router(documents_router)
-
+    app.include_router(feedback_router)
     return app
 
 
