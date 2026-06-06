@@ -22,7 +22,10 @@ class ChromaStore:
         try:
             self._client = chromadb.PersistentClient(
                 path=self.settings.CHROMA_PERSIST_DIRECTORY,
-                settings=ChromaSettings(anonymized_telemetry=False),
+                settings=ChromaSettings(
+                    anonymized_telemetry=False,
+                    allow_reset=True,
+                ),
             )
             self._collection = self._client.get_or_create_collection(
                 name=self.settings.CHROMA_COLLECTION_NAME,
@@ -58,15 +61,23 @@ class ChromaStore:
             return 0
         return len(self._client.list_collections())
 
-    def query(self, query_text: str, n_results: int = 5, where: dict = None) -> dict:
-        """Busca chunks similares a la consulta."""
+    def query(
+        self,
+        query_text: str = None,
+        query_embedding: list = None,
+        n_results: int = 5,
+        where: dict = None,
+    ) -> dict:
         if not self.is_connected:
             return {"documents": [], "metadatas": [], "distances": []}
 
-        params = {
-            "query_texts": [query_text],
-            "n_results": n_results,
-        }
+        params = {"n_results": n_results}
+
+        if query_embedding:
+            params["query_embeddings"] = [query_embedding]
+        else:
+            params["query_texts"] = [query_text]
+
         if where:
             params["where"] = where
 

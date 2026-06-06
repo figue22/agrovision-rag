@@ -4,31 +4,33 @@ from datetime import datetime
 
 from src.config.settings import get_settings
 from src.vectorstore.chroma_store import ChromaStore
+from src.embeddings.gemini_embeddings import GeminiEmbeddings
 from src.schemas.rag import (
     QueryRequest, QueryResponse, SourceReference, DocumentsListResponse,
 )
-
 
 logger = logging.getLogger("agrovision-rag")
 
 
 class RAGService:
-    """Servicio principal del pipeline RAG.
-
-    En esta fase (HU-013) se implementa la estructura base con ChromaDB.
-    La integración con LangChain chains, embeddings de OpenAI y
-    generación de respuestas se completa en las HU-044 a HU-050.
-    """
+    """Servicio principal del pipeline RAG."""
 
     def __init__(self):
         self.settings = get_settings()
-        self.chroma = ChromaStore()
+        self._chroma = None
+        self._embeddings = None
         self._start_time = time.time()
-        self._initialize()
 
-    def _initialize(self) -> None:
-        """Conecta a ChromaDB al iniciar."""
-        self.chroma.connect
+    def _get_chroma(self) -> ChromaStore:
+        if self._chroma is None:
+            self._chroma = ChromaStore()
+            self._chroma.connect()
+        return self._chroma
+
+    def _get_embeddings(self) -> GeminiEmbeddings:
+        if self._embeddings is None:
+            self._embeddings = GeminiEmbeddings()
+        return self._embeddings
 
     @property
     def uptime(self) -> float:
@@ -37,25 +39,26 @@ class RAGService:
     @property
     def openai_configured(self) -> bool:
         return (
-            self.settings.OPENAI_API_KEY != "your-openai-api-key"
-            and len(self.settings.OPENAI_API_KEY) > 10
+            self.settings.GOOGLE_API_KEY != "your-google-api-key"
+            and len(self.settings.GOOGLE_API_KEY) > 10
         )
 
     async def query(self, request: QueryRequest) -> QueryResponse:
-        """Procesa una consulta RAG.
-
-        En esta fase retorna resultados de búsqueda vectorial sin LLM.
-        La generación con LangChain se integra en HU-046.
-        """
         start = time.time()
+        chroma = self._get_chroma()
+        embeddings = self._get_embeddings()
 
-        # Buscar chunks relevantes en ChromaDB
+        # Generar embedding de la query con Gemini
+        logger.info("Generando embedding para query: %s", request.pregunta[:50])
+        query_embedding = embeddings.embed_query(request.pregunta)
+
         where_filter = None
         if request.filtro_categoria:
             where_filter = {"categoria": request.filtro_categoria}
 
-        results = self.chroma.query(
-            query_text=request.pregunta,
+        # Buscar por embedding en ChromaDB
+        results = chroma.query(
+            query_embedding=query_embedding,
             n_results=request.top_k,
             where=where_filter,
         )
@@ -69,7 +72,7 @@ class RAGService:
         for i, doc_text in enumerate(documents):
             metadata = metadatas[i] if i < len(metadatas) else {}
             distance = distances[i] if i < len(distances) else 0
-            score = max(0, 1 - distance)  # Convertir distancia a score de similitud
+            score = max(0, 1 - distance)
 
             fuentes.append(SourceReference(
                 documento_id=metadata.get("documento_id"),
@@ -79,11 +82,10 @@ class RAGService:
                 score=round(score, 4),
             ))
 
-        # Generar respuesta
         if fuentes:
             respuesta = (
                 f"Encontré {len(fuentes)} fragmentos relevantes sobre tu consulta. "
-                "La generación de respuestas con LLM se habilitará en la HU-046. "
+                "La generación de respuestas con LLM se habilitará en la próxima HU. "
                 "Por ahora, revisa los fragmentos fuente a continuación."
             )
         else:
@@ -98,17 +100,15 @@ class RAGService:
             respuesta=respuesta,
             fuentes=fuentes,
             pregunta_original=request.pregunta,
-            modelo_usado="chromadb-similarity" if not self.openai_configured else self.settings.LLM_MODEL,
+            modelo_usado=self.settings.LLM_MODEL,
             tokens_usados=None,
             tiempo_respuesta_ms=duration_ms,
             timestamp=datetime.utcnow(),
         )
 
     def get_documents_list(self) -> DocumentsListResponse:
-        """Lista los documentos indexados en ChromaDB."""
-        # En esta fase retorna info básica desde ChromaDB
-        # La integración con la tabla `documentos` de PostgreSQL se hace en HU-047
-        total_chunks = self.chroma.document_count
+        chroma = self._get_chroma()
+        total_chunks = chroma.document_count
 
         return DocumentsListResponse(
             documentos=[],
