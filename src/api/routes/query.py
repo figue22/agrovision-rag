@@ -5,7 +5,6 @@ POST /query: pregunta -> respuesta contextualizada + fuentes + logging
 
 import logging
 import time
-from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Request
 
