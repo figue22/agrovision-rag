@@ -5,7 +5,6 @@ HU-050 — Servicio de feedback y métricas RAG
 import json
 import logging
 import uuid
-from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import create_engine, text
