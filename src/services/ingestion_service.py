@@ -143,6 +143,7 @@ class IngestionService:
         subido_por_id: Optional[str] = None,
         parcela_id: Optional[str] = None,
         idioma: str = "es",
+        institucion: Optional[str] = None,
     ) -> dict:
         documento_id = str(uuid.uuid4())
         logger.info("PASO 1: Iniciando ingesta: %s (%s)", titulo, documento_id)
@@ -167,6 +168,7 @@ class IngestionService:
                 "tipo_archivo": tipo_archivo,
                 "idioma": idioma,
                 "documento_id": documento_id,
+                "institucion": institucion or "",
             }
             if parcela_id:
                 metadata_base["parcela_id"] = parcela_id

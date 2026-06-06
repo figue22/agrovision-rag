@@ -134,6 +134,7 @@ class RAGService:
                 documento_id=metadata.get("documento_id"),
                 titulo=metadata.get("titulo", "Documento sin título"),
                 pagina=metadata.get("pagina"),
+                institucion=metadata.get("institucion"),
                 chunk_text=doc_text[:500],
                 score=round(score, 4),
             ))
