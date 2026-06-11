@@ -46,8 +46,11 @@ def build_personalized_prompt(
     region: Optional[str] = None,
     nombre_agricultor: Optional[str] = None,
     parcela_nombre: Optional[str] = None,
+    historial: Optional[list] = None,
 ) -> str:
-    """Construye prompt personalizado según el contexto del agricultor."""
+    """Construye prompt personalizado con contexto del agricultor e historial."""
+
+    # Contexto del agricultor
     contexto_agricultor = ""
     if any([nombre_agricultor, cultivo, region, parcela_nombre]):
         partes = []
@@ -62,15 +65,24 @@ def build_personalized_prompt(
             partes.append(f"Parcela: {parcela_nombre}")
         contexto_agricultor = "**Contexto del agricultor:**\n" + "\n".join(partes) + "\n\n"
 
+    # Historial de conversación
+    historial_texto = ""
+    if historial and len(historial) > 0:
+        historial_texto = "**Historial de la conversación (para mantener el hilo):**\n"
+        for msg in historial[-6:]:  # últimos 6 mensajes
+            rol = "Agricultor" if msg.rol == "usuario" else "Asistente"
+            historial_texto += f"{rol}: {msg.contenido}\n"
+        historial_texto += "\n"
+
     prompt = f"""{SYSTEM_PROMPT}
 
-{contexto_agricultor}**Documentos técnicos de referencia:**
+{contexto_agricultor}{historial_texto}**Documentos técnicos de referencia:**
 
 {contexto}
 
-**Pregunta:** {pregunta}
+**Pregunta actual:** {pregunta}
 
-Responde de forma personalizada considerando el contexto del agricultor si está disponible.
+Responde considerando el historial de la conversación para mantener el hilo. \
 Cita las fuentes usando [Fuente N] cuando uses información específica de los documentos."""
 
     return prompt
@@ -255,6 +267,7 @@ class RAGService:
                         region=request.region,
                         nombre_agricultor=request.nombre_agricultor,
                         parcela_nombre=request.parcela_nombre,
+                        historial=request.historial,
                     )
                     llm = self._get_llm()
                     response = llm.generate_content(prompt)
