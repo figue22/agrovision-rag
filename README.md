@@ -185,10 +185,10 @@ cp .env.example .env
 python scripts/ingest_documents.py --dir ./data/documents
 
 # Desarrollo
-uvicorn src.main:app --reload --port 8001
+uvicorn src.main:app --reload --port 8002
 
 # Producción
-uvicorn src.main:app --host 0.0.0.0 --port 8001 --workers 2
+uvicorn src.main:app --host 0.0.0.0 --port 8002 --workers 2
 
 # Tests
 pytest tests/

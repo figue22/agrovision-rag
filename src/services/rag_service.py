@@ -54,7 +54,7 @@ def build_personalized_prompt(
         if nombre_agricultor:
             partes.append(f"Agricultor: {nombre_agricultor}")
         if cultivo:
-            cultivo_nombre = {"cafe": "café", "cacao": "cacao"}.get(cultivo, cultivo)
+            cultivo_nombre = {"platano": "plátano", "cacao": "cacao"}.get(cultivo, cultivo)
             partes.append(f"Cultivo principal: {cultivo_nombre}")
         if region:
             partes.append(f"Región/Departamento: {region}")
