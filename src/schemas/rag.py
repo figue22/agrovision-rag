@@ -3,7 +3,6 @@ from typing import Optional
 from datetime import datetime
 from enum import Enum
 
-
 # ── Enums ──
 
 class EstadoIndexacion(str, Enum):
@@ -13,14 +12,12 @@ class EstadoIndexacion(str, Enum):
     FALLIDO = "fallido"
     EXCLUIDO = "excluido"
 
-
 # ── Historial ──
 
 class MensajeHistorial(BaseModel):
     """Mensaje del historial de conversación."""
     rol: str = Field(..., description="'usuario' o 'asistente'")
     contenido: str
-
 
 # ── Query (consulta RAG) ──
 
@@ -38,7 +35,6 @@ class QueryRequest(BaseModel):
         description="Últimos mensajes de la conversación para mantener contexto",
     )
 
-
 # ── resto del archivo igual ──
 
 class SourceReference(BaseModel):
@@ -49,7 +45,6 @@ class SourceReference(BaseModel):
     institucion: str | None = Field(default=None, description="Institución autora del documento")
     chunk_text: str = Field(..., description="Fragmento relevante del documento")
     score: float = Field(..., description="Score de similitud")
-
 
 class QueryResponse(BaseModel):
     """Respuesta del sistema RAG con citación de fuentes."""
@@ -62,7 +57,6 @@ class QueryResponse(BaseModel):
     relevancia_pct: Optional[float] = Field(default=None, description="Score de relevancia promedio %")
     timestamp: datetime
 
-
 class DocumentUploadResponse(BaseModel):
     documento_id: str
     titulo: str
@@ -71,7 +65,6 @@ class DocumentUploadResponse(BaseModel):
     estado_indexacion: EstadoIndexacion
     chunks_generados: int = 0
     mensaje: str
-
 
 class DocumentInfo(BaseModel):
     documento_id: str
@@ -85,12 +78,10 @@ class DocumentInfo(BaseModel):
     fecha_indexacion: Optional[datetime] = None
     creado_en: datetime
 
-
 class DocumentsListResponse(BaseModel):
     documentos: list[DocumentInfo]
     total: int
     total_chunks: int
-
 
 class HealthResponse(BaseModel):
     status: str = "ok"
@@ -121,12 +112,10 @@ class FeedbackRequest(BaseModel):
     tiempo_respuesta_ms: Optional[float] = Field(default=None)
     relevancia_pct: Optional[float] = Field(default=None)
 
-
 class FeedbackResponse(BaseModel):
     """Respuesta al enviar feedback."""
     feedback_id: str
     mensaje: str = "Feedback registrado correctamente"
-
 
 class MetricasRAG(BaseModel):
     """Métricas del sistema RAG."""
