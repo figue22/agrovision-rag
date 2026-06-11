@@ -14,6 +14,14 @@ class EstadoIndexacion(str, Enum):
     EXCLUIDO = "excluido"
 
 
+# ── Historial ──
+
+class MensajeHistorial(BaseModel):
+    """Mensaje del historial de conversación."""
+    rol: str = Field(..., description="'usuario' o 'asistente'")
+    contenido: str
+
+
 # ── Query (consulta RAG) ──
 
 class QueryRequest(BaseModel):
@@ -21,23 +29,17 @@ class QueryRequest(BaseModel):
     pregunta: str = Field(..., description="Pregunta en español")
     top_k: int = Field(default=5, ge=1, le=20)
     filtro_categoria: Optional[str] = Field(default=None)
-    cultivo: Optional[str] = Field(
+    cultivo: Optional[str] = Field(default=None, description="Cultivo del agricultor: platano, cacao")
+    region: Optional[str] = Field(default=None, description="Departamento del agricultor")
+    nombre_agricultor: Optional[str] = Field(default=None, description="Nombre del agricultor")
+    parcela_nombre: Optional[str] = Field(default=None, description="Nombre de la parcela")
+    historial: Optional[list[MensajeHistorial]] = Field(
         default=None,
-        description="Cultivo del agricultor: cafe, cacao",
-    )
-    region: Optional[str] = Field(
-        default=None,
-        description="Departamento del agricultor",
-    )
-    nombre_agricultor: Optional[str] = Field(
-        default=None,
-        description="Nombre del agricultor para personalizar respuesta",
-    )
-    parcela_nombre: Optional[str] = Field(
-        default=None,
-        description="Nombre de la parcela para personalizar respuesta",
+        description="Últimos mensajes de la conversación para mantener contexto",
     )
 
+
+# ── resto del archivo igual ──
 
 class SourceReference(BaseModel):
     """Referencia a la fuente de una respuesta."""
@@ -51,7 +53,6 @@ class SourceReference(BaseModel):
 
 class QueryResponse(BaseModel):
     """Respuesta del sistema RAG con citación de fuentes."""
-    consulta_id: str = Field(default="", description="ID único para feedback")
     respuesta: str = Field(..., description="Respuesta generada por el LLM")
     fuentes: list[SourceReference] = Field(default_factory=list)
     pregunta_original: str
@@ -62,10 +63,7 @@ class QueryResponse(BaseModel):
     timestamp: datetime
 
 
-# ── Documents ──
-
 class DocumentUploadResponse(BaseModel):
-    """Respuesta al subir un documento para indexación."""
     documento_id: str
     titulo: str
     tipo_archivo: str
@@ -76,7 +74,6 @@ class DocumentUploadResponse(BaseModel):
 
 
 class DocumentInfo(BaseModel):
-    """Información de un documento indexado."""
     documento_id: str
     titulo: str
     categoria: str
@@ -90,16 +87,12 @@ class DocumentInfo(BaseModel):
 
 
 class DocumentsListResponse(BaseModel):
-    """Lista de documentos indexados."""
     documentos: list[DocumentInfo]
     total: int
     total_chunks: int
 
 
-# ── Health ──
-
 class HealthResponse(BaseModel):
-    """Health check del servicio RAG."""
     status: str = "ok"
     service: str = "agrovision-rag"
     version: str
@@ -111,8 +104,7 @@ class HealthResponse(BaseModel):
     database_connected: bool = False
     uptime_seconds: float = 0
     timestamp: datetime
-
-
+    
 # ── Feedback y Métricas RAG ──
 
 class FeedbackRequest(BaseModel):
