@@ -23,7 +23,7 @@ class QueryRequest(BaseModel):
     filtro_categoria: Optional[str] = Field(default=None)
     cultivo: Optional[str] = Field(
         default=None,
-        description="Cultivo del agricultor: cafe, cacao",
+        description="Cultivo del agricultor: platano, cacao",
     )
     region: Optional[str] = Field(
         default=None,
