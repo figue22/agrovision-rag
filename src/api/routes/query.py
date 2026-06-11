@@ -16,9 +16,9 @@ logger = logging.getLogger("agrovision-rag")
 
 # ── Respuestas predefinidas (fallback) ──
 FALLBACK_RESPONSES = {
-    "cafe": (
-        "El café colombiano requiere temperaturas entre 18-24°C, altitudes de 1200-2000 msnm "
-        "y precipitaciones de 1800-2800 mm anuales. Para consultas específicas, asegúrate de "
+    "platano": (
+        "El plátano colombiano requiere temperaturas entre 24-30°C, altitudes de 0-1200 msnm "
+        "y precipitaciones de 1500-2500 mm anuales. Para consultas específicas, asegúrate de "
         "tener documentos técnicos indexados en el sistema."
     ),
     "cacao": (
